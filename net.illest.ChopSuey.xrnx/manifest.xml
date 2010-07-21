@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool>
+  <ApiVersion>1.0</ApiVersion>
+  <Id>net.illest.ChopSuey</Id>
+  <Version>0.1</Version>
+  <Name>Chop Suey</Name>
+  <Author>w. light (will@illest.net)</Author>
+  <Description>chop up yr breaks like a boss, boss.</Description>
+  <Category>Sample Editor</Category>
+  <Homepage>http://tools.renoise.com</Homepage>
+</RenoiseScriptingTool>
