@@ -30,17 +30,26 @@ renoise.tool():add_menu_entry {
 -- things
 --
 
+function copy_attributes(from, to, attrs)
+	for _,i in pairs(attrs) do
+		to[i] = from[i]
+	end
+end
+
 function selection_to_new_sample()
 	local s = renoise.song()
 
 	local ins = s.selected_instrument
 	local smp = s.selected_sample
 	local smpidx = s.selected_sample_index
-
 	local buf = smp.sample_buffer
-	local sel = buf.selection_range
 
-	-- I really dislike this 1-indexed bullshit
+	if( not buf.has_sample_data ) then
+		renoise.app():show_status("No sample!")
+		return
+	end
+
+	local sel = buf.selection_range
 	local slen = sel[2] - sel[1] + 1
 
 	if( slen == buf.number_of_frames ) then
@@ -48,7 +57,10 @@ function selection_to_new_sample()
 		return
 	end
 
-	local new = ins.insert_sample_at(ins, smpidx + 1)
+	-- first, let's create the sample that will consist of
+	-- the current selection
+
+	local new = ins:insert_sample_at(smpidx + 1)
 	local nbuf = new.sample_buffer
 
 	if( not nbuf:create_sample_data(buf.sample_rate, buf.bit_depth,
@@ -56,8 +68,6 @@ function selection_to_new_sample()
 		renoise.app():show_error("Couldn't create sample!")
 		return
 	end
-
-	local ch, fr
 
 	-- copy data to new sample
 	for fr = 1, nbuf.number_of_frames do
@@ -67,17 +77,17 @@ function selection_to_new_sample()
 		end
 	end
 
-	local to_copy = {"loop_mode", "base_note", "fine_tune", "autoseek"}
-	local i
-
-	for _,i in pairs(to_copy) do new[i] = smp[i] end
+	copy_attributes(smp, new, {"loop_mode", "base_note", "fine_tune", "autoseek"})
 
 	-- TODO: what
 	new["name"] = ("chopped #%d"):format(smpidx)
 	nbuf:finalize_sample_data_changes()
 
-	-- create a new, truncated sample
-	local new = ins.insert_sample_at(ins, smpidx + 1)
+	-- now we'll create a replacement sample for the original one
+	-- this will have the audio data on either side of the selection
+	-- (i.e. just like if you had pressed "cut" or "delete")
+
+	local new = ins:insert_sample_at(smpidx + 1)
 	local nbuf = new.sample_buffer
 
 	if( not nbuf:create_sample_data(buf.sample_rate, buf.bit_depth,
@@ -99,11 +109,13 @@ function selection_to_new_sample()
 		end
 	end
 
-	table.insert(to_copy, "name")
-	for _,i in pairs(to_copy) do new[i] = smp[i] end
+	copy_attributes(smp, new, {"name", "loop_mode", "base_note", "fine_tune", "autoseek"})
 
 	nbuf:finalize_sample_data_changes()
 
+	-- remove the original sample now that we've got a replacement
 	ins:delete_sample_at(smpidx)
+
+	-- and select the new, chopped sample
 	s.selected_sample_index = smpidx + 1
 end
